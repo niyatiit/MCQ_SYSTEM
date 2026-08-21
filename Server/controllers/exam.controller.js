@@ -87,4 +87,11 @@ const getExamById = asyncHandler(async (req, res) => {
   res.json(exam);
 });
 
-export { createExam, getExamById };
+// @desc    Get all exams (for student to choose subject)
+// @route   GET /api/exam
+const getAllExams = asyncHandler(async (req, res) => {
+  const exams = await Exam.find({}).select('subjectName subjectCode duration totalQuestions');
+  res.json(exams);
+});
+
+export { createExam, getExamById , getAllExams};
