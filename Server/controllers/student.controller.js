@@ -15,14 +15,30 @@ const shuffleArray = (array) => {
 
 // @desc    Register student info (fake login) + link to exam
 // @route   POST /api/student/register
-const registerStudent = asyncHandler (async (req, res) => {
-  const { name, enrollmentNumber, semester, subjectName, examId } = req.body;
+const registerStudent = asyncHandler(async (req, res) => {
+  const { name, enrollmentNumber, department, semester, subjectName, examId } = req.body;
+
+  if (!department) {
+    res.status(400);
+    throw new Error('Department is required');
+  }
+
+  // Verify the exam actually belongs to the student's selected department
+  const exam = await Exam.findById(examId);
+  if (!exam) {
+    res.status(404);
+    throw new Error('Exam not found');
+  }
+
+  if (exam.department !== department) {
+    res.status(403);
+    throw new Error('This exam is not available for your department');
+  }
 
   // Check if this student already exists for this exam
   let student = await Student.findOne({ enrollmentNumber, exam: examId });
 
   if (student) {
-    // Already exists - check status
     if (student.examStatus === 'completed') {
       res.status(400);
       throw new Error('You have already completed this exam');
@@ -31,7 +47,6 @@ const registerStudent = asyncHandler (async (req, res) => {
       res.status(400);
       throw new Error('Exam already in progress. You cannot restart.');
     }
-    // if not_started, allow to continue (edge case)
     return res.json(student);
   }
 
@@ -39,10 +54,10 @@ const registerStudent = asyncHandler (async (req, res) => {
   student = await Student.create({
     name,
     enrollmentNumber,
+    department,
     semester,
     subjectName,
     exam: examId,
-
     examStatus: 'not_started',
   });
 
@@ -76,7 +91,6 @@ const startExam = async (req, res) => {
     throw new Error('Exam not found');
   }
 
-  // Shuffle question order for this student
   const shuffledQuestionIds = shuffleArray(exam.questions.map((q) => q._id));
 
   student.questionOrder = shuffledQuestionIds;
@@ -89,7 +103,6 @@ const startExam = async (req, res) => {
     totalQuestions: exam.totalQuestions,
   });
 };
-
 
 // @desc    Get questions for student in their shuffled order (no correct answers exposed)
 // @route   GET /api/student/:id/questions
@@ -106,12 +119,10 @@ const getExamQuestions = asyncHandler(async (req, res) => {
     throw new Error('Exam not started or already completed');
   }
 
-  // Fetch questions matching student's shuffled order
   const questions = await Question.find({
     _id: { $in: student.questionOrder },
-  }).select('-correctAnswer'); // hide correct answer from response
+  }).select('-correctAnswer');
 
-  // Re-order them according to student.questionOrder (Mongo doesn't preserve $in order)
   const orderedQuestions = student.questionOrder.map((qId) =>
     questions.find((q) => q._id.toString() === qId.toString())
   );
@@ -122,7 +133,7 @@ const getExamQuestions = asyncHandler(async (req, res) => {
 // @desc    Submit exam - calculate marks, lock student as completed
 // @route   POST /api/student/:id/submit
 const submitExam = asyncHandler(async (req, res) => {
-  const { answers } = req.body; // answers = [{ questionId, selectedOption }, ...]
+  const { answers } = req.body;
 
   const student = await Student.findById(req.params.id);
 
@@ -141,7 +152,6 @@ const submitExam = asyncHandler(async (req, res) => {
     throw new Error('Exam was not started properly');
   }
 
-  // Fetch correct answers for all questions in this exam
   const questions = await Question.find({
     _id: { $in: student.questionOrder },
   });
@@ -150,7 +160,7 @@ const submitExam = asyncHandler(async (req, res) => {
   for (const ans of answers) {
     const question = questions.find((q) => q._id.toString() === ans.questionId);
     if (question && question.correctAnswer === ans.selectedOption) {
-      marks += 1; // 1 mark per question
+      marks += 1;
     }
   }
 
@@ -159,7 +169,6 @@ const submitExam = asyncHandler(async (req, res) => {
   student.submittedAt = new Date();
   await student.save();
 
-  // Student only sees success message, NOT marks
   res.json({ message: 'Exam submitted successfully' });
 });
 

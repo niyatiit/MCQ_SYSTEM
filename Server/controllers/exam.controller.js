@@ -1,8 +1,8 @@
-import asyncHandler from 'express-async-handler';
-import mammoth from 'mammoth';
-import fs from 'fs';
-import Exam from '../models/exam.model.js';
-import Question from '../models/question.model.js';
+import asyncHandler from "express-async-handler";
+import mammoth from "mammoth";
+import fs from "fs";
+import Exam from "../models/exam.model.js";
+import Question from "../models/question.model.js";
 
 // @desc    Create exam by uploading Word file with MCQs
 // @route   POST /api/exam/create
@@ -11,7 +11,7 @@ const createExam = asyncHandler(async (req, res) => {
 
   if (!req.file) {
     res.status(400);
-    throw new Error('Please upload a .docx file');
+    throw new Error("Please upload a .docx file");
   }
 
   // Extract raw text from Word file
@@ -30,18 +30,22 @@ const createExam = asyncHandler(async (req, res) => {
   const parsedQuestions = [];
 
   for (const block of questionBlocks) {
-    const lines = block.split('\n').map((l) => l.trim()).filter((l) => l);
+    const lines = block
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l);
 
     const questionText = lines[0];
     const options = [];
-    let correctAnswer = '';
+    let correctAnswer = "";
 
     for (const line of lines.slice(1)) {
-      if (/^A\)/.test(line)) options.push(line.replace(/^A\)\s*/, ''));
-      else if (/^B\)/.test(line)) options.push(line.replace(/^B\)\s*/, ''));
-      else if (/^C\)/.test(line)) options.push(line.replace(/^C\)\s*/, ''));
-      else if (/^D\)/.test(line)) options.push(line.replace(/^D\)\s*/, ''));
-      else if (/^Answer:/i.test(line)) correctAnswer = line.replace(/^Answer:\s*/i, '').trim();
+      if (/^A\)/.test(line)) options.push(line.replace(/^A\)\s*/, ""));
+      else if (/^B\)/.test(line)) options.push(line.replace(/^B\)\s*/, ""));
+      else if (/^C\)/.test(line)) options.push(line.replace(/^C\)\s*/, ""));
+      else if (/^D\)/.test(line)) options.push(line.replace(/^D\)\s*/, ""));
+      else if (/^Answer:/i.test(line))
+        correctAnswer = line.replace(/^Answer:\s*/i, "").trim();
     }
 
     if (questionText && options.length === 4 && correctAnswer) {
@@ -51,7 +55,7 @@ const createExam = asyncHandler(async (req, res) => {
 
   if (parsedQuestions.length === 0) {
     res.status(400);
-    throw new Error('No valid questions found. Check your Word file format.');
+    throw new Error("No valid questions found. Check your Word file format.");
   }
 
   // Create Exam first
@@ -67,7 +71,7 @@ const createExam = asyncHandler(async (req, res) => {
 
   // Create Questions linked to this exam
   const questionDocs = await Question.insertMany(
-    parsedQuestions.map((q) => ({ ...q, exam: exam._id }))
+    parsedQuestions.map((q) => ({ ...q, exam: exam._id })),
   );
 
   // Link question IDs back to exam
@@ -83,7 +87,7 @@ const getExamById = asyncHandler(async (req, res) => {
   const exam = await Exam.findById(req.params.id);
   if (!exam) {
     res.status(404);
-    throw new Error('Exam not found');
+    throw new Error("Exam not found");
   }
   res.json(exam);
 });
@@ -91,7 +95,14 @@ const getExamById = asyncHandler(async (req, res) => {
 // @desc    Get all exams (for student to choose subject)
 // @route   GET /api/exam
 const getAllExams = asyncHandler(async (req, res) => {
-  const exams = await Exam.find({}).select('subjectName subjectCode department duration totalQuestions');
+  const filter = {};
+  if (req.query.department) {
+    filter.department = req.query.department;
+  }
+
+  const exams = await Exam.find(filter).select(
+    "subjectName subjectCode department duration totalQuestions",
+  );
   res.json(exams);
 });
 

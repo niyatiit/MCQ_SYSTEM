@@ -18,20 +18,34 @@ const StudentLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Fetch exams whenever department changes
   useEffect(() => {
+    if (!formData.department) {
+      setExams([]);
+      return;
+    }
+
     const fetchExams = async () => {
       try {
-        const { data } = await axiosInstance.get('/exam');
+        const { data } = await axiosInstance.get('/exam', {
+          params: { department: formData.department },
+        });
         setExams(data);
       } catch (err) {
         setError('Failed to load exams. Please refresh.');
       }
     };
     fetchExams();
-  }, []);
+  }, [formData.department]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      // reset selected exam whenever department changes, so a stale exam from another dept can't stay selected
+      ...(name === 'department' ? { examId: '' } : {}),
+    }));
   };
 
   const validateForm = () => {
@@ -151,15 +165,23 @@ const StudentLogin = () => {
               name="examId"
               value={formData.examId}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!formData.department}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             >
-              <option value="">-- Select Subject --</option>
+              <option value="">
+                {formData.department ? '-- Select Subject --' : 'Select a department first'}
+              </option>
               {exams.map((exam) => (
                 <option key={exam._id} value={exam._id}>
                   {exam.subjectName} ({exam.subjectCode}) - {exam.totalQuestions} Qs, {exam.duration} min
                 </option>
               ))}
             </select>
+            {formData.department && exams.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                No exams available yet for {formData.department}.
+              </p>
+            )}
           </div>
 
           <button
