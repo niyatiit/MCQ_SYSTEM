@@ -2,7 +2,7 @@ const Footer = () => {
   return (
     <footer className="w-full mt-auto border-t border-gray-200 py-4">
       <p className="text-center text-sm text-gray-500">
-        Developed by Stuti Pandya & Niyati Patel — MCA Sem 3
+       © 2026 MCQ Based System, Built by Stuti Pandya & Niyati Patel, MCA Sem 3 Student at Sardar Vallabhbhai Global University.
       </p>
     </footer>
   );

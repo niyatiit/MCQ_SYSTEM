@@ -1,15 +1,16 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [adminToken, setAdminToken] = useState(
-    localStorage.getItem('adminToken') || null
-  );
+  // Page load thata j localStorage check karo — null nahi, saved token vapro
+  const [adminToken, setAdminToken] = useState(() => {
+    return localStorage.getItem('adminToken') || null;
+  });
 
   const login = (token) => {
-    localStorage.setItem('adminToken', token);
-    setAdminToken(token);
+    localStorage.setItem('adminToken', token);   // save in localStorage
+    setAdminToken(token);                          // update context state
   };
 
   const logout = () => {

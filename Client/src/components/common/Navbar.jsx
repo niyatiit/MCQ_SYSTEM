@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Navbar = () => {
   const location = useLocation();
+  const { adminToken } = useAuth();
 
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Student', path: '/student' },
     { name: 'Teacher', path: '/teacher/create-exam' },
-    { name: 'Admin', path: '/admin/login' },
+    { name: 'Admin', path: adminToken ? '/admin/dashboard' : '/admin/login' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -46,4 +48,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default Navbar; 
