@@ -35,23 +35,30 @@ const registerStudent = asyncHandler(async (req, res) => {
     throw new Error('This exam is not available for your department');
   }
 
-  // Check if this student already exists for this exam
-  let student = await Student.findOne({ enrollmentNumber, exam: examId });
+  // Check if this enrollment number has ALREADY taken any exam in this department
+  const existingInDepartment = await Student.findOne({ enrollmentNumber, department });
 
-  if (student) {
-    if (student.examStatus === 'completed') {
-      res.status(400);
-      throw new Error('You have already completed this exam');
+  if (existingInDepartment) {
+    if (existingInDepartment.exam.toString() === examId) {
+      // Same student, same exam — check status (edge case: retry before starting)
+      if (existingInDepartment.examStatus === 'completed') {
+        res.status(400);
+        throw new Error('You have already completed this exam');
+      }
+      if (existingInDepartment.examStatus === 'in_progress') {
+        res.status(400);
+        throw new Error('Exam already in progress. You cannot restart.');
+      }
+      return res.json(existingInDepartment);
     }
-    if (student.examStatus === 'in_progress') {
-      res.status(400);
-      throw new Error('Exam already in progress. You cannot restart.');
-    }
-    return res.json(student);
+
+    // Same enrollment number, but a DIFFERENT exam within the same department — block
+    res.status(403);
+    throw new Error('This enrollment number has already registered for an exam in this department');
   }
 
   // New student entry
-  student = await Student.create({
+  const student = await Student.create({
     name,
     enrollmentNumber,
     department,
