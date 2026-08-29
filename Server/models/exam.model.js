@@ -12,6 +12,11 @@ const examSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    department: {
+      type: String,
+      required: true,
+      enum: ['BBA', 'BCA', 'BCOM', 'MCA', 'MBA', 'JMC', 'IMCA'],
+    },
     totalQuestions: {
       type: Number,
       required: true,

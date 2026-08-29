@@ -7,7 +7,7 @@ import Question from '../models/question.model.js';
 // @desc    Create exam by uploading Word file with MCQs
 // @route   POST /api/exam/create
 const createExam = asyncHandler(async (req, res) => {
-  const { subjectName, subjectCode, duration } = req.body;
+  const { subjectName, subjectCode, department, duration } = req.body;
 
   if (!req.file) {
     res.status(400);
@@ -58,8 +58,9 @@ const createExam = asyncHandler(async (req, res) => {
   const exam = await Exam.create({
     subjectName,
     subjectCode,
+    department,
     totalQuestions: parsedQuestions.length,
-    totalMarks: parsedQuestions.length, // 1 mark per question
+    totalMarks: parsedQuestions.length,
     duration,
     questions: [],
   });
@@ -90,8 +91,8 @@ const getExamById = asyncHandler(async (req, res) => {
 // @desc    Get all exams (for student to choose subject)
 // @route   GET /api/exam
 const getAllExams = asyncHandler(async (req, res) => {
-  const exams = await Exam.find({}).select('subjectName subjectCode duration totalQuestions');
+  const exams = await Exam.find({}).select('subjectName subjectCode department duration totalQuestions');
   res.json(exams);
 });
 
-export { createExam, getExamById , getAllExams};
+export { createExam, getExamById, getAllExams };

@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import axiosInstance from '../../api/axiosInstance.js';
 
+const DEPARTMENTS = ['BBA', 'BCA', 'BCOM', 'MCA', 'MBA', 'JMC', 'IMCA'];
+
 const CreateExam = () => {
   const [formData, setFormData] = useState({
     subjectName: '',
     subjectCode: '',
+    department: '',
     duration: '',
   });
   const [file, setFile] = useState(null);
@@ -30,6 +33,7 @@ const CreateExam = () => {
   const validateForm = () => {
     if (!formData.subjectName.trim()) return 'Subject name is required';
     if (!formData.subjectCode.trim()) return 'Subject code is required';
+    if (!formData.department) return 'Please select a department';
     if (!formData.duration || formData.duration <= 0) return 'Valid duration is required';
     if (!file) return 'Please upload a .docx file with questions';
     return '';
@@ -49,6 +53,7 @@ const CreateExam = () => {
     const data = new FormData();
     data.append('subjectName', formData.subjectName);
     data.append('subjectCode', formData.subjectCode);
+    data.append('department', formData.department);
     data.append('duration', formData.duration);
     data.append('file', file);
 
@@ -61,7 +66,7 @@ const CreateExam = () => {
       setSuccess(
         `Exam created successfully! ${res.data.totalQuestions} questions loaded, ${res.data.totalMarks} marks total.`
       );
-      setFormData({ subjectName: '', subjectCode: '', duration: '' });
+      setFormData({ subjectName: '', subjectCode: '', department: '', duration: '' });
       setFile(null);
       e.target.reset();
     } catch (err) {
@@ -116,6 +121,23 @@ const CreateExam = () => {
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. CS301"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Department
+            </label>
+            <select
+              name="department"
+              value={formData.department}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Select Department --</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
           </div>
 
           <div>

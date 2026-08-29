@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance.js';
 
+const DEPARTMENTS = ['BBA', 'BCA', 'BCOM', 'MCA', 'MBA', 'JMC', 'IMCA'];
+
 const StudentLogin = () => {
   const navigate = useNavigate();
 
@@ -9,13 +11,13 @@ const StudentLogin = () => {
   const [formData, setFormData] = useState({
     name: '',
     enrollmentNumber: '',
+    department: '',
     semester: '',
     examId: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Fetch available exams on page load
   useEffect(() => {
     const fetchExams = async () => {
       try {
@@ -35,6 +37,7 @@ const StudentLogin = () => {
   const validateForm = () => {
     if (!formData.name.trim()) return 'Name is required';
     if (!formData.enrollmentNumber.trim()) return 'Enrollment number is required';
+    if (!formData.department) return 'Please select your department';
     if (!formData.semester.trim()) return 'Semester is required';
     if (!formData.examId) return 'Please select a subject/exam';
     return '';
@@ -50,7 +53,6 @@ const StudentLogin = () => {
       return;
     }
 
-    // Get subject name from selected exam
     const selectedExam = exams.find((ex) => ex._id === formData.examId);
 
     try {
@@ -60,7 +62,6 @@ const StudentLogin = () => {
         subjectName: selectedExam.subjectName,
       });
 
-      // Navigate to exam page with student ID
       navigate(`/exam/${data._id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
@@ -109,6 +110,23 @@ const StudentLogin = () => {
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g. 21CS001"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Department
+            </label>
+            <select
+              name="department"
+              value={formData.department}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Select Department --</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
           </div>
 
           <div>

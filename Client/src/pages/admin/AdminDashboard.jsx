@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
+const DEPARTMENTS = ['BBA', 'BCA', 'BCOM', 'MCA', 'MBA', 'JMC', 'IMCA'];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { adminToken, logout } = useAuth();
@@ -12,39 +14,86 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('students');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  // filters
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('');
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const config = {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        params: {
+          department: departmentFilter || undefined,
+          semester: semesterFilter || undefined,
+        },
+      };
+      const [studentsRes, examsRes] = await Promise.all([
+        axiosInstance.get('/admin/students', config),
+        axiosInstance.get('/admin/exams', { headers: config.headers }),
+      ]);
+      setStudents(studentsRes.data);
+      setExams(examsRes.data);
+    } catch (err) {
+      setError('Failed to load data. Please login again.');
+      if (err.response?.status === 401) {
+        logout();
+        navigate('/admin/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!adminToken) {
       navigate('/admin/login');
       return;
     }
-
-    const fetchData = async () => {
-      try {
-        const config = { headers: { Authorization: `Bearer ${adminToken}` } };
-        const [studentsRes, examsRes] = await Promise.all([
-          axiosInstance.get('/admin/students', config),
-          axiosInstance.get('/admin/exams', config),
-        ]);
-        setStudents(studentsRes.data);
-        setExams(examsRes.data);
-      } catch (err) {
-        setError('Failed to load data. Please login again.');
-        if (err.response?.status === 401) {
-          logout();
-          navigate('/admin/login');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminToken]);
+
+  // Re-fetch whenever filters change
+  useEffect(() => {
+    if (adminToken) fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [departmentFilter, semesterFilter]);
 
   const handleLogout = () => {
     logout();
     navigate('/admin/login');
+  };
+
+  const handleExport = async (type) => {
+    setExporting(true);
+    setError('');
+    try {
+      const res = await axiosInstance.get(`/admin/export/${type}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        params: {
+          department: departmentFilter || undefined,
+          semester: semesterFilter || undefined,
+        },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = type === 'excel' ? 'student-results.xlsx' : 'student-results.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`Failed to export ${type.toUpperCase()}.`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const statusBadge = (status) => {
@@ -84,6 +133,60 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Filters + Export */}
+        <div className="bg-white shadow-md rounded-lg p-4 mb-6 flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 text-sm"
+            >
+              <option value="">All Departments</option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Semester</label>
+            <input
+              type="text"
+              value={semesterFilter}
+              onChange={(e) => setSemesterFilter(e.target.value)}
+              placeholder="e.g. 5"
+              className="border border-gray-300 rounded px-3 py-2 text-sm w-24"
+            />
+          </div>
+
+          {(departmentFilter || semesterFilter) && (
+            <button
+              onClick={() => { setDepartmentFilter(''); setSemesterFilter(''); }}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={() => handleExport('excel')}
+              disabled={exporting}
+              className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition disabled:bg-gray-400"
+            >
+              {exporting ? 'Exporting...' : 'Export Excel'}
+            </button>
+            <button
+              onClick={() => handleExport('pdf')}
+              disabled={exporting}
+              className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition disabled:bg-gray-400"
+            >
+              {exporting ? 'Exporting...' : 'Export PDF'}
+            </button>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <button
@@ -112,6 +215,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Enrollment No.</th>
+                  <th className="px-4 py-3">Department</th>
                   <th className="px-4 py-3">Semester</th>
                   <th className="px-4 py-3">Subject</th>
                   <th className="px-4 py-3">Status</th>
@@ -123,6 +227,7 @@ const AdminDashboard = () => {
                   <tr key={s._id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{s.name}</td>
                     <td className="px-4 py-3">{s.enrollmentNumber}</td>
+                    <td className="px-4 py-3">{s.department}</td>
                     <td className="px-4 py-3">{s.semester}</td>
                     <td className="px-4 py-3">{s.exam?.subjectName}</td>
                     <td className="px-4 py-3">{statusBadge(s.examStatus)}</td>
@@ -133,7 +238,7 @@ const AdminDashboard = () => {
                 ))}
                 {students.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan="7" className="px-4 py-6 text-center text-gray-500">
                       No students yet.
                     </td>
                   </tr>
@@ -151,6 +256,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th className="px-4 py-3">Subject Name</th>
                   <th className="px-4 py-3">Subject Code</th>
+                  <th className="px-4 py-3">Department</th>
                   <th className="px-4 py-3">Total Questions</th>
                   <th className="px-4 py-3">Total Marks</th>
                   <th className="px-4 py-3">Duration</th>
@@ -161,6 +267,7 @@ const AdminDashboard = () => {
                   <tr key={ex._id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{ex.subjectName}</td>
                     <td className="px-4 py-3">{ex.subjectCode}</td>
+                    <td className="px-4 py-3">{ex.department}</td>
                     <td className="px-4 py-3">{ex.totalQuestions}</td>
                     <td className="px-4 py-3">{ex.totalMarks}</td>
                     <td className="px-4 py-3">{ex.duration} min</td>
@@ -168,7 +275,7 @@ const AdminDashboard = () => {
                 ))}
                 {exams.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
                       No exams created yet.
                     </td>
                   </tr>

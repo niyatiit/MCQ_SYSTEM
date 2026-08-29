@@ -12,6 +12,11 @@ const studentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+     department: {
+      type: String,
+      required: true,
+      enum: ['BBA', 'BCA', 'BCOM', 'MCA', 'MBA', 'JMC', 'IMCA'],
+    },
     semester: {
       type: String,
       required: true,
