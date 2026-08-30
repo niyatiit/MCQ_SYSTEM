@@ -13,8 +13,8 @@ const seedAdmin = async () => {
     await Admin.deleteMany(); // clears old admin if any (optional, use with caution)
 
     await Admin.create({
-      username: 'admin',
-      password: 'admin@123', // will be hashed automatically via pre('save') hook
+      username: 'svgu',
+      password: 'SVGU@CPI@12345', // will be hashed automatically via pre('save') hook
     });
 
     console.log('Admin seeded successfully!');
